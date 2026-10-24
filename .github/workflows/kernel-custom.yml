@@ -1,4 +1,4 @@
-name: Android 内核构建-自定义
+name: Android Kernel Build - Custom
 
 permissions:
   contents: write
@@ -7,9 +7,9 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      # ==================== 内核版本配置 ====================
+      # ==================== Kernel version configuration ====================
       kernel_version:
-        description: "内核版本"
+        description: "Kernel version"
         required: true
         type: choice
         options:
@@ -19,14 +19,14 @@ on:
           - "6.6"
           - "6.12"
         default: "5.10"
-      # 内核子版本：每个内核版本独立下拉，仅对应版本生效，选后自动匹配安全补丁级别
+      # Kernel sub-level: one dropdown per kernel version, only the matching one takes effect; the security patch level is matched automatically
       sub_level_5_10:
-        description: "5.10 子版本 (选择后自动匹配安全补丁级别；仅内核版本为 5.10 时生效)"
+        description: "5.10 sub-level (security patch level is matched automatically; only applies when kernel version is 5.10)"
         required: false
         type: choice
-        default: "auto (自动匹配最新安全补丁级别)"
+        default: "auto (match latest security patch level automatically)"
         options:
-          - "auto (自动匹配最新安全补丁级别)"
+          - "auto (match latest security patch level automatically)"
           - "43 (2021-08)"
           - "43 (2021-09)"
           - "43 (2021-10)"
@@ -65,12 +65,12 @@ on:
           - "246 (2025-12)"
           - "lts (5.10.272)"
       sub_level_5_15:
-        description: "5.15 子版本 (选择后自动匹配安全补丁级别；仅内核版本为 5.15 时生效)"
+        description: "5.15 sub-level (security patch level is matched automatically; only applies when kernel version is 5.15)"
         required: false
         type: choice
-        default: "auto (自动匹配最新安全补丁级别)"
+        default: "auto (match latest security patch level automatically)"
         options:
-          - "auto (自动匹配最新安全补丁级别)"
+          - "auto (match latest security patch level automatically)"
           - "41 (2022-06)"
           - "41 (2022-07)"
           - "41 (2022-08)"
@@ -108,12 +108,12 @@ on:
           - "194 (2025-12)"
           - "lts (5.15.220)"
       sub_level_6_1:
-        description: "6.1 子版本 (选择后自动匹配安全补丁级别；仅内核版本为 6.1 时生效)"
+        description: "6.1 sub-level (security patch level is matched automatically; only applies when kernel version is 6.1)"
         required: false
         type: choice
-        default: "auto (自动匹配最新安全补丁级别)"
+        default: "auto (match latest security patch level automatically)"
         options:
-          - "auto (自动匹配最新安全补丁级别)"
+          - "auto (match latest security patch level automatically)"
           - "25 (2023-06)"
           - "25 (2023-07)"
           - "25 (2023-08)"
@@ -148,12 +148,12 @@ on:
           - "176 (2026-09)"
           - "lts (6.1.177)"
       sub_level_6_6:
-        description: "6.6 子版本 (选择后自动匹配安全补丁级别；仅内核版本为 6.6 时生效)"
+        description: "6.6 sub-level (security patch level is matched automatically; only applies when kernel version is 6.6)"
         required: false
         type: choice
-        default: "auto (自动匹配最新安全补丁级别)"
+        default: "auto (match latest security patch level automatically)"
         options:
-          - "auto (自动匹配最新安全补丁级别)"
+          - "auto (match latest security patch level automatically)"
           - "50 (2024-10)"
           - "56 (2024-11)"
           - "57 (2024-12)"
@@ -173,12 +173,12 @@ on:
           - "143 (2026-10)"
           - "lts (6.6.144)"
       sub_level_6_12:
-        description: "6.12 子版本 (选择后自动匹配安全补丁级别；仅内核版本为 6.12 时生效)"
+        description: "6.12 sub-level (security patch level is matched automatically; only applies when kernel version is 6.12)"
         required: false
         type: choice
-        default: "auto (自动匹配最新安全补丁级别)"
+        default: "auto (match latest security patch level automatically)"
         options:
-          - "auto (自动匹配最新安全补丁级别)"
+          - "auto (match latest security patch level automatically)"
           - "23 (2025-06)"
           - "30 (2025-07)"
           - "38 (2025-08)"
@@ -189,9 +189,9 @@ on:
           - "92 (2026-09)"
           - "lts (6.12.96)"
 
-      # ==================== KernelSU 配置 ====================
+      # ==================== KernelSU configuration ====================
       kernelsu_variant:
-        description: "KernelSU 变体"
+        description: "KernelSU variant"
         required: true
         type: choice
         options:
@@ -200,29 +200,29 @@ on:
           - FinaSU
         default: BakaSU
 
-      # ==================== 可选配置 ====================
+      # ==================== Optional configuration ====================
       version:
-        description: "自定义版本名 (可选)"
+        description: "Custom version name (optional)"
         required: false
         type: string
       build_time:
-        description: "自定义构建时间 (留空=自动获取当前北京时间) (示例 Sun Dec  1 08:10:00 UTC 2026)"
+        description: "Custom build time (leave empty = automatically use current Beijing time) (example: Sun Dec  1 08:10:00 UTC 2026)"
         required: false
         type: string
         default: ""
 
-      # ==================== 选项配置 ====================
+      # ==================== Options ====================
       use_kpm:
-        description: "KPM 功能（仅SukiSU支持）"
+        description: "KPM feature (SukiSU only)"
         required: true
         type: choice
-        default: "disabled (关闭)"
+        default: "disabled"
         options:
-          - "disabled (关闭)"
-          - "enabled (开启)"
-          - "patched (开启并修补)"
+          - "disabled"
+          - "enabled"
+          - "patched (enabled and patched)"
       droidspaces:
-        description: "Droidspaces 容器支持 (5.10~6.6: 槽位补丁, 6.12: 开/关)"
+        description: "Droidspaces container support (5.10~6.6: slot patch, 6.12: on/off)"
         required: false
         type: choice
         options:
@@ -232,57 +232,57 @@ on:
           - "345"
         default: "off"
       artifact_upload_mode:
-        description: "构建产物上传模式"
+        description: "Build artifact upload mode"
         required: true
         type: choice
         options:
-          - "仅上传 AnyKernel3.zip"
-          - "上传全部"
-        default: "仅上传 AnyKernel3.zip"
+          - "AnyKernel3.zip only"
+          - "Upload everything"
+        default: "AnyKernel3.zip only"
       droidspaces_ntsync:
-        description: "启用 Droidspaces 容器 NTSync 支持（需启用 Droidspaces）"
+        description: "Enable NTSync support for Droidspaces containers (requires Droidspaces to be enabled)"
         required: false
         type: boolean
         default: false
 
-      # ==================== 功能开关 ====================
+      # ==================== Feature toggles ====================
       use_zram:
-        description: "启用 ZRAM 压缩算法"
+        description: "Enable ZRAM compression algorithm"
         required: true
         type: boolean
         default: false
       use_bbg:
-        description: "启用 BBG 基带保护"
+        description: "Enable BBG baseband guard"
         required: true
         type: boolean
         default: false
       use_net_enhance:
-        description: "启用 网络增强 (IPSet + BBR)"
+        description: "Enable network enhancements (IPSet + BBR)"
         required: true
         type: boolean
         default: false
       use_rekernel:
-        description: "启用 Re-Kernel 驱动"
+        description: "Enable Re-Kernel driver"
         required: false
         type: boolean
         default: false
       cve_2026_43499_patch:
-        description: "应用 CVE-2026-43499 rtmutex 修复链"
+        description: "Apply CVE-2026-43499 rtmutex fix chain"
         required: false
         type: boolean
         default: false
       cancel_susfs:
-        description: "禁用 SUSFS"
+        description: "Disable SUSFS"
         required: true
         type: boolean
         default: false
       supp_op:
-        description: "启用 一加 骁龙8 Elite/Gen5 支持"
+        description: "Enable OnePlus Snapdragon 8 Elite/Gen5 support"
         required: false
         type: boolean
         default: false
       skip_incompatible:
-        description: "功能不兼容或无法使用时自动跳过该功能（不中断构建）"
+        description: "Automatically skip a feature if it is incompatible or unusable (does not abort the build)"
         required: false
         type: boolean
         default: false
@@ -296,10 +296,10 @@ jobs:
       kernel_full: ${{ steps.resolve.outputs.kernel_full }}
       os_patch_level: ${{ steps.resolve.outputs.os_patch_level }}
     steps:
-      - name: 检出版本数据
+      - name: Check out version data
         uses: actions/checkout@v7
 
-      - name: 解析安全补丁级别
+      - name: Resolve security patch level
         id: resolve
         env:
           KERNEL_VERSION: ${{ inputs.kernel_version }}
@@ -325,28 +325,28 @@ jobs:
           }
           android_version = android_map.get(kernel_version)
           if android_version is None:
-              print(f"::error::未适配的内核版本: {kernel_version}")
+              print(f"::error::Unsupported kernel version: {kernel_version}")
               sys.exit(1)
 
           data_path = Path("data") / android_version / f"{kernel_version}.json"
 
           if not data_path.exists():
-              print(f"::error::未找到版本数据: {data_path}")
+              print(f"::error::Version data not found: {data_path}")
               sys.exit(1)
 
           with data_path.open("r", encoding="utf-8") as f:
               data = json.load(f)
 
-          # 按内核版本取对应的子版本下拉输入
+          # Pick the sub-level dropdown input that matches the kernel version
           sub_level_input = os.environ.get(f"SUB_LEVEL_{kernel_version.replace('.', '_')}", "").strip()
 
           if sub_level_input and not sub_level_input.startswith("auto"):
-              # 按子版本反查安全补丁级别，如 "138 (2025-06)" -> 2025-06
+              # Look up the security patch level by sub-level, e.g. "138 (2025-06)" -> 2025-06
               token = sub_level_input.split()[0]
               if token == "lts":
                   kernel_full = data.get("lts")
                   if not kernel_full:
-                      print(f"::error::{android_version} / {kernel_version} 缺少 LTS 版本数据")
+                      print(f"::error::{android_version} / {kernel_version} is missing LTS version data")
                       sys.exit(1)
                   sub_level = "X"
                   patch_level = "lts"
@@ -356,27 +356,27 @@ jobs:
                       if entry.get("kernel") == f"{kernel_version}.{token}"
                   ]
                   if not matches:
-                      print(f"::error::未找到 {android_version} / {kernel_version}.{token} 对应的版本数据")
+                      print(f"::error::No version data found for {android_version} / {kernel_version}.{token}")
                       sys.exit(1)
-                  # entries 按日期升序，取该子版本对应的最新安全补丁级别
+                  # entries are sorted by date ascending; take the latest security patch level for this sub-level
                   latest = matches[-1]
                   kernel_full = latest.get("kernel", "")
                   patch_level = latest.get("date", "")
                   sub_level = token
               else:
-                  print(f"::error::无法识别的子版本: {sub_level_input}")
+                  print(f"::error::Unrecognized sub-level: {sub_level_input}")
                   sys.exit(1)
           else:
-              # auto：取版本数据中最新的月度 ASB 条目（数据由 update_data.py 持续刷新）
+              # auto: take the latest monthly ASB entry in the version data (data is kept fresh by update_data.py)
               entries = data.get("entries", [])
               if not entries:
-                  print(f"::error::{android_version} / {kernel_version} 没有可用的版本数据")
+                  print(f"::error::No version data available for {android_version} / {kernel_version}")
                   sys.exit(1)
               latest = entries[-1]
               kernel_full = latest.get("kernel", "")
               prefix = f"{kernel_version}."
               if not kernel_full.startswith(prefix):
-                  print(f"::error::版本数据异常: {kernel_full} 不属于 {kernel_version}")
+                  print(f"::error::Invalid version data: {kernel_full} does not belong to {kernel_version}")
                   sys.exit(1)
               patch_level = latest.get("date", "")
               sub_level = kernel_full.rsplit(".", 1)[-1]
@@ -387,13 +387,13 @@ jobs:
               output.write(f"kernel_full={kernel_full}\n")
               output.write(f"os_patch_level={patch_level}\n")
 
-          print(f"解析结果: {android_version} / {kernel_full} / 补丁级别 {patch_level}，子版本号: {sub_level}")
+          print(f"Resolved: {android_version} / {kernel_full} / patch level {patch_level}, sub-level: {sub_level}")
           PY
 
   build-custom-kernel:
     name: "${{ needs.resolve-version.outputs.kernel_full }}-${{ needs.resolve-version.outputs.android_version }}-${{ needs.resolve-version.outputs.os_patch_level }}"
     needs: [resolve-version, get-ksu-manager]
-    # 管理器拉取失败时不阻塞内核构建（ksuCommit 为空则内核跟随 main HEAD）
+    # A failed manager fetch does not block the kernel build (if ksuCommit is empty, the kernel follows main HEAD)
     if: ${{ !cancelled() && needs.resolve-version.result == 'success' }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
@@ -404,8 +404,8 @@ jobs:
       os_patch_level: ${{ needs.resolve-version.outputs.os_patch_level }}
       revision: "r1"
       ksu_variant: ${{ inputs.kernelsu_variant }}
-      # 内核侧 KernelSU 检出到官方最新上传 Manager 构建的同一提交，
-      # 使内核 KSU 版本与拉取的管理器安装包严格一致（BakaSU / FinaSU 生效）
+      # Check out the kernel-side KernelSU at the same commit as the latest official uploaded Manager build,
+      # so the kernel's KSU version strictly matches the fetched manager APK (effective for BakaSU / FinaSU)
       ksu_commit: ${{ needs.get-ksu-manager.outputs.ksuCommit }}
       ksu_cert_size: ${{ needs.get-ksu-manager.outputs.managerCertSize }}
       ksu_cert_hash: ${{ needs.get-ksu-manager.outputs.managerCertHash }}
@@ -424,7 +424,7 @@ jobs:
       artifact_upload_mode: ${{ inputs.artifact_upload_mode }}
       skip_incompatible: ${{ inputs.skip_incompatible || false }}
 
-  # 先拉取官方最新上传的 Manager 构建并输出其提交 SHA，供内核构建对齐
+  # First fetch the latest official uploaded Manager build and output its commit SHA, so the kernel build can align with it
   get-ksu-manager:
     uses: ./.github/workflows/get-manager.yml
     secrets: inherit
