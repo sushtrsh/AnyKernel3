@@ -19,34 +19,34 @@ on:
         value: ${{ jobs.get_ksu_manager.outputs.ksuVer }}
 
       managerVer:
-        description: "官方最新上传 Manager 构建的实测版本号"
+        description: "Measured version number of the latest official uploaded Manager build"
         value: ${{ jobs.get_ksu_manager.outputs.managerVer }}
 
       ksuCommit:
-        description: "官方最新上传 Manager 构建对应的提交 SHA（内核侧对齐用）"
+        description: "Commit SHA of the latest official uploaded Manager build (used for kernel-side alignment)"
         value: ${{ jobs.get_ksu_manager.outputs.ksuCommit }}
 
       managerCertSize:
-        description: "FinaSU 管理器签名证书 DER 尺寸（0x 十六进制，内核第二信任槽对齐用）"
+        description: "FinaSU manager signing certificate DER size (0x hex, used to align the kernel's second trust slot)"
         value: ${{ jobs.get_ksu_manager.outputs.managerCertSize }}
 
       managerCertHash:
-        description: "FinaSU 管理器签名证书 SHA256（内核第二信任槽对齐用）"
+        description: "FinaSU manager signing certificate SHA256 (used to align the kernel's second trust slot)"
         value: ${{ jobs.get_ksu_manager.outputs.managerCertHash }}
 
 jobs:
   get_ksu_manager:
     runs-on: ubuntu-latest
     outputs:
-      # 输出1: KSU版本号
+      # Output 1: KSU version number
       ksuVer: ${{ steps.get_version.outputs.kversion }}
-      # 输出2: SUSFS版本号
+      # Output 2: SUSFS version number
       susVer: ${{ steps.get_version.outputs.sversion }}
-      # 输出3: Manager 实测版本号
+      # Output 3: Manager measured version number
       managerVer: ${{ steps.add_KSU.outputs.managerVer }}
-      # 输出4: 官方最新上传构建的提交 SHA（内核侧对齐用）
+      # Output 4: commit SHA of the latest official uploaded build (used for kernel-side alignment)
       ksuCommit: ${{ steps.add_KSU.outputs.ksuCommit }}
-      # 输出5/6: FinaSU 管理器签名证书（内核第二信任槽对齐用）
+      # Output 5/6: FinaSU manager signing certificate (used to align the kernel's second trust slot)
       managerCertSize: ${{ steps.add_KSU.outputs.managerCertSize }}
       managerCertHash: ${{ steps.add_KSU.outputs.managerCertHash }}
     env:
@@ -56,15 +56,15 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - name: 检出脚本仓库
+      - name: Check out script repository
         uses: actions/checkout@v7
 
-      - name: 安装依赖
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y git curl jq
 
-      - name: 获取 KSU & SUSFS 版本
+      - name: Get KSU & SUSFS versions
         id: get_version
         run: |
 
@@ -84,13 +84,13 @@ jobs:
 
           cd KernelSU
 
-          # 计算KSU版本号
+          # Calculate the KSU version number
           KSU_GIT_VERSION=$(git rev-list --count HEAD)
 
           if [ "${{ inputs.kernelsu_variant }}" == "SukiSU" ]; then
             KSU_VERSION=$((40000 + KSU_GIT_VERSION - 2815))
           elif [ "${{ inputs.kernelsu_variant }}" == "FinaSU" ]; then
-            # FinaSU 内核 Kbuild 与管理器 build.gradle.kts 均以 30000 + git 提交数计算版本
+            # FinaSU's kernel Kbuild and manager build.gradle.kts both compute the version as 30000 + git commit count
             KSU_VERSION=$((30000 + KSU_GIT_VERSION))
           else
             KSU_VERSION=$((30700 + KSU_GIT_VERSION))
@@ -98,16 +98,16 @@ jobs:
           echo $KSU_VERSION
           echo "KSU_VERSION=$KSU_VERSION" >> $GITHUB_ENV
 
-          # 计算SUSFS版本号
+          # Calculate the SUSFS version number
           INFO="https://gitlab.com/simonpunk/susfs4ksu/-/raw/gki-android14-6.1/ksu_module_susfs/module.prop"
           SUS_VERSION=$(curl -s $INFO | awk -F '=' '$1 == "version" { print $2 }')
           echo $SUS_VERSION
 
-          # 导出这两个值给release
+          # Export these two values for the release
           echo "kversion=$KSU_VERSION" >> $GITHUB_OUTPUT
           echo "sversion=$SUS_VERSION" >> $GITHUB_OUTPUT
 
-      - name: 添加 KernelSU
+      - name: Add KernelSU
         id: add_KSU
         continue-on-error: true
         run: |
@@ -131,51 +131,52 @@ jobs:
           FILENAME="build-manager.yml"
 
           if [ "${{ inputs.kernelsu_variant }}" == "FinaSU" ]; then
-            # FinaSU 只使用官方 GitHub Releases：
-            #   1) 管理器 = 最新 Release 的 APK（不拉取 CI 构建产物）
-            #   2) 内核 = 该 Release tag 对应的提交（build.yml 检出 ksuCommit）
-            # 两者同源同值（Kbuild 与管理器 versionCode 均为 30000 + 提交数），
-            # 证书直接取自该 Release APK，保证与实际分发的管理器严格一致。
-            echo "获取 FinaSU 最新 Release..."
+            # FinaSU only uses official GitHub Releases:
+            #   1) Manager = the APK of the latest Release (CI build artifacts are not fetched)
+            #   2) Kernel = the commit the Release tag points to (build.yml checks out ksuCommit)
+            # The two share the same source and value (Kbuild and the manager versionCode are both
+            # 30000 + commit count); the certificate is taken straight from that Release APK, which
+            # guarantees a strict match with the manager actually distributed.
+            echo "Fetching the latest FinaSU Release..."
             REL_JSON=""
             for ATTEMPT in 1 2 3; do
               REL_JSON=$(curl -s --fail --max-time 30                 -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}"                 "https://api.github.com/repos/LyraVoid/FinaSU/releases/latest")                 && [ -n "$REL_JSON" ] && break
-              echo "获取 Release 信息失败，重试 ($ATTEMPT/3)..."
+              echo "Failed to fetch Release info, retrying ($ATTEMPT/3)..."
               sleep 5
             done
             if [ -z "$REL_JSON" ]; then
-              echo "::warning::无法获取 FinaSU 最新 Release 信息，本次跳过管理器与证书对齐（内核回退 master + Release APK 证书）"
+              echo "::warning::Cannot fetch the latest FinaSU Release info; skipping manager and certificate alignment this time (kernel falls back to master + Release APK certificate)"
               exit 0
             fi
             REL_TAG=$(printf '%s' "$REL_JSON" | jq -r '.tag_name')
             REL_APK_URL=$(printf '%s' "$REL_JSON" | jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' | head -n1)
             REL_COMMIT=$(curl -s --fail --max-time 30               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}"               "https://api.github.com/repos/LyraVoid/FinaSU/commits/$REL_TAG" | jq -r '.sha')
             if [ -z "$REL_APK_URL" ] || [ "$REL_APK_URL" = "null" ] || [ -z "$REL_COMMIT" ] || [ "$REL_COMMIT" = "null" ]; then
-              echo "::warning::Release $REL_TAG 中没有 APK 资产或无法解析提交，本次跳过管理器与证书对齐"
+              echo "::warning::Release $REL_TAG has no APK asset or its commit cannot be resolved; skipping manager and certificate alignment this time"
               exit 0
             fi
-            echo "下载 Release 管理器: $REL_TAG ($REL_COMMIT)"
+            echo "Downloading Release manager: $REL_TAG ($REL_COMMIT)"
             mkdir -p manager-artifacts
             REL_APK="manager-artifacts/$(basename "$REL_APK_URL")"
             curl -sL --fail --retry 3 --max-time 300 -o "$REL_APK" "$REL_APK_URL" || {
-              echo "::warning::下载 Release 管理器失败，本次跳过管理器与证书对齐"
+              echo "::warning::Failed to download the Release manager; skipping manager and certificate alignment this time"
               exit 0
             }
             CLEAN_NAME=$(basename "$REL_APK" | sed -E 's/-(arm64-v8a|armeabi-v7a|armv7|riscv64|x86_64|x86|universal)-release\.apk$/.apk/')
             MANAGER_VERSION=$(echo "$CLEAN_NAME" | grep -oE '_[0-9]+' | tail -n 1 | tr -d '_')
             if ! [[ "$MANAGER_VERSION" =~ ^[0-9]+$ ]]; then
-              echo "::warning::无法从 Release APK 文件名解析版本 ($(basename "$REL_APK"))，本次跳过管理器与证书对齐"
+              echo "::warning::Cannot parse the version from the Release APK file name ($(basename "$REL_APK")); skipping manager and certificate alignment this time"
               exit 0
             fi
-            echo "从 Release 管理器 APK 提取签名证书..."
+            echo "Extracting the signing certificate from the Release manager APK..."
             CERT_INFO=$(python3 "$GITHUB_WORKSPACE/scripts/finasu_compat/extract_manager_cert.py" "$REL_APK" | head -n1)
             if [ -z "$CERT_INFO" ]; then
-              echo "::warning::未能从 Release 管理器 APK 提取签名证书，内核侧将回退 Release APK 证书提取"
+              echo "::warning::Could not extract the signing certificate from the Release manager APK; the kernel side will fall back to extracting it from the Release APK"
               exit 0
             fi
             CERT_SIZE=$(echo "$CERT_INFO" | awk '{print $1}')
             CERT_HASH=$(echo "$CERT_INFO" | awk '{print $2}')
-            echo "Release: $REL_TAG, 管理器版本 $MANAGER_VERSION, 证书 size=$CERT_SIZE sha256=$CERT_HASH"
+            echo "Release: $REL_TAG, manager version $MANAGER_VERSION, certificate size=$CERT_SIZE sha256=$CERT_HASH"
             echo "MANAGER_VERSION=$MANAGER_VERSION" >> $GITHUB_ENV
             echo "managerVer=$MANAGER_VERSION" >> $GITHUB_OUTPUT
             echo "ksuCommit=$REL_COMMIT" >> $GITHUB_OUTPUT
@@ -195,10 +196,12 @@ jobs:
             fi
           }
 
-          # 仿 BakaSU_CI：只拉取官方 main 分支最新上传（push）的 Manager 构建，
-          # 并以下载到的 APK 文件名实测 versionCode 命名，确保包名与包内容严格一致
-          # 注意：runs 列表 API 的排序/缓存在部分仓库不可靠（可能漏掉最新构建），
-          # 而 created 日期过滤参数走可靠查询路径，因此按日期窗口从今天往回推进检索
+          # Modeled on BakaSU_CI: only fetch the latest uploaded (push) Manager build from the official main branch,
+          # and name it by the versionCode measured from the downloaded APK file name, ensuring the package name
+          # strictly matches the package contents.
+          # Note: the sorting/caching of the runs-list API is unreliable on some repos (it may miss the latest
+          # build), whereas the created date-filter parameter goes through a reliable query path, so we search
+          # by date windows, working backwards from today
           RUNS_BASE="https://api.github.com/repos/$REPO/actions/workflows/$FILENAME/runs?status=success"
           CAND_FILE=$(mktemp)
           TODAY=$(date -u +%Y-%m-%d)
@@ -209,13 +212,13 @@ jobs:
             else
               FROM=$(date -u -d "today - $DAYS days" +%Y-%m-%d)
             fi
-            echo "检索 $FROM ~ $TODAY 期间官方 $EXPECTED_BRANCH 分支构建..."
+            echo "Searching official $EXPECTED_BRANCH branch builds from $FROM ~ $TODAY..."
             for PAGE in 1 2 3; do
               RUNS=""
               for ATTEMPT in 1 2 3; do
                 RUNS=$(curl -s --fail --max-time 30 -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                   "$RUNS_BASE&created=$FROM..$TODAY&per_page=30&page=$PAGE") && [ -n "$RUNS" ] && break
-                echo "查询构建列表失败，重试 ($ATTEMPT/3)..."
+                echo "Failed to query the build list, retrying ($ATTEMPT/3)..."
                 RUNS=""
                 sleep 3
               done
@@ -229,11 +232,11 @@ jobs:
                 HEAD_BRANCH=$(printf '%s' "$RUNS" | jq -r ".workflow_runs[$INDEX].head_branch")
                 EVENT=$(printf '%s' "$RUNS" | jq -r ".workflow_runs[$INDEX].event")
                 CREATED=$(printf '%s' "$RUNS" | jq -r ".workflow_runs[$INDEX].created_at")
-                # 认领官方默认分支上传的构建（push 与 workflow_dispatch 均可，
-                # 手动触发常用于正式上传前测试），跳过 PR / 其他分支构建
-                #（SukiSU/BakaSU 为 main，FinaSU 为 master）
+                # Claim builds uploaded from the official default branch (both push and workflow_dispatch;
+                # manual triggers are often used for testing before an official upload), skipping PR / other-branch builds
+                # (main for SukiSU/BakaSU, master for FinaSU)
                 if [ "$HEAD_BRANCH" != "$EXPECTED_BRANCH" ] || { [ "$EVENT" != "push" ] && [ "$EVENT" != "workflow_dispatch" ]; }; then
-                  echo "跳过构建 $BUILD_ID ($HEAD_BRANCH/$EVENT): 非官方 $EXPECTED_BRANCH 分支构建"
+                  echo "Skipping build $BUILD_ID ($HEAD_BRANCH/$EVENT): not an official $EXPECTED_BRANCH branch build"
                   continue
                 fi
                 printf '%s\t%s\t%s\n' "$CREATED" "$BUILD_ID" "$HEAD_SHA" >> "$CAND_FILE"
@@ -246,52 +249,52 @@ jobs:
 
           if [ ! -s "$CAND_FILE" ]; then
             rm -f "$CAND_FILE"
-            echo "未找到官方 $EXPECTED_BRANCH 分支上传的 Manager 构建。"
+            echo "No Manager build uploaded from the official $EXPECTED_BRANCH branch was found."
             exit 1
           fi
-          # sort -u 去重（窗口扩大后会重复收集），按创建时间降序（最新优先）
+          # sort -u de-duplicates (entries get collected repeatedly as the window widens), ordered by creation time descending (newest first)
           CAND_COUNT=$(sort -u -t$'\t' -k1,1r "$CAND_FILE" | wc -l)
-          echo "共找到 $CAND_COUNT 个官方 $EXPECTED_BRANCH 分支构建，从最新开始逐个下载（以 APK 文件名实测版本）..."
+          echo "Found $CAND_COUNT official $EXPECTED_BRANCH branch build(s); downloading one by one from the newest (version measured from the APK file name)..."
 
           while IFS=$'\t' read -r CREATED BUILD_ID HEAD_SHA; do
             ARTIFACTS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/repos/$REPO/actions/runs/$BUILD_ID/artifacts")
             CANDIDATE_LIST=$(get_manager_artifacts "$ARTIFACTS")
             if [ -z "$CANDIDATE_LIST" ]; then
-              echo "跳过构建 $BUILD_ID ($EXPECTED_BRANCH, $CREATED): 未找到包含 '$KSUM' 的产物"
+              echo "Skipping build $BUILD_ID ($EXPECTED_BRANCH, $CREATED): no artifact containing '$KSUM' found"
               continue
             fi
 
-            echo "下载构建 $BUILD_ID ($EXPECTED_BRANCH, $CREATED, ${HEAD_SHA:0:8}) 的产物..."
+            echo "Downloading artifacts of build $BUILD_ID ($EXPECTED_BRANCH, $CREATED, ${HEAD_SHA:0:8})..."
             rm -rf manager-artifacts
             mkdir -p manager-artifacts
             while IFS=$'\t' read -r NAME URL; do
               SAFE_NAME=$(echo "$NAME" | tr '/ ' '__')
               if ! curl -sL --fail -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                 -o "manager-artifacts/$SAFE_NAME.zip" "$URL"; then
-                echo "下载 $NAME 失败"
+                echo "Failed to download $NAME"
                 continue
               fi
               mkdir -p "manager-artifacts/$SAFE_NAME"
-              unzip -oq "manager-artifacts/$SAFE_NAME.zip" -d "manager-artifacts/$SAFE_NAME" || echo "解压 $NAME 失败"
+              unzip -oq "manager-artifacts/$SAFE_NAME.zip" -d "manager-artifacts/$SAFE_NAME" || echo "Failed to extract $NAME"
               rm -f "manager-artifacts/$SAFE_NAME.zip"
             done <<< "$CANDIDATE_LIST"
 
-            # 从 APK 文件名提取实测 versionCode 作为 artifact 命名
-            # 优先 arm64-v8a release（BakaSU 下游只保留这一个 ABI）
+            # Extract the measured versionCode from the APK file name to name the artifact
+            # Prefer arm64-v8a release (BakaSU downstream only keeps this one ABI)
             APK_FILE=$(find manager-artifacts -type f -name "*-arm64-v8a-release.apk" | head -n 1)
             if [ -z "$APK_FILE" ]; then
               APK_FILE=$(find manager-artifacts -type f -name "*release.apk" ! -name "*debug*" | head -n 1)
             fi
             if [ -z "$APK_FILE" ]; then
-              echo "跳过构建 $BUILD_ID ($EXPECTED_BRANCH, $CREATED): artifact 中无 release APK"
+              echo "Skipping build $BUILD_ID ($EXPECTED_BRANCH, $CREATED): no release APK in the artifact"
               continue
             fi
-            # 先剥离 ABI 段再提取版本，避免 x86_64 的 "_64" 等数字尾巴被误当成 versionCode
+            # Strip the ABI segment before extracting the version, so numeric tails such as "_64" in x86_64 are not mistaken for the versionCode
             CLEAN_NAME=$(basename "$APK_FILE" | sed -E 's/-(arm64-v8a|armeabi-v7a|armv7|riscv64|x86_64|x86|universal)-release\.apk$/.apk/')
             ACTUAL_VERSION=$(echo "$CLEAN_NAME" | grep -oE '_[0-9]+' | tail -n 1 | tr -d '_')
             if ! [[ "$ACTUAL_VERSION" =~ ^[0-9]+$ ]]; then
-              echo "跳过构建 $BUILD_ID ($EXPECTED_BRANCH, $CREATED): 无法从 APK 文件名解析版本 ($(basename "$APK_FILE"))"
+              echo "Skipping build $BUILD_ID ($EXPECTED_BRANCH, $CREATED): cannot parse the version from the APK file name ($(basename "$APK_FILE"))"
               continue
             fi
 
@@ -303,12 +306,13 @@ jobs:
           rm -f "$CAND_FILE"
 
           if [ -z "$MANAGER_VERSION" ]; then
-            echo "未获取到官方 $EXPECTED_BRANCH 分支最新上传的 Manager artifact。"
+            echo "Could not get the latest uploaded Manager artifact from the official $EXPECTED_BRANCH branch."
             exit 1
           fi
-          echo "选择 Manager 构建 $MANAGER_BUILD_ID ($EXPECTED_BRANCH, ${MANAGER_HEAD_SHA:0:8}), APK 实测版本 $MANAGER_VERSION"
-          # 内核侧将对齐到该构建的同一提交（BakaSU/FinaSU：直接检出；SukiSU：改写版本来源 REPO_BRANCH），
-          # 因此对比"该提交对应的 KSU 版本"而非默认分支 HEAD 的版本
+          echo "Selected Manager build $MANAGER_BUILD_ID ($EXPECTED_BRANCH, ${MANAGER_HEAD_SHA:0:8}), APK measured version $MANAGER_VERSION"
+          # The kernel side will align to the same commit as that build (BakaSU/FinaSU: direct checkout; SukiSU: rewrite
+          # the version source REPO_BRANCH), so compare against "the KSU version corresponding to that commit"
+          # rather than the version at the default branch HEAD
           PIN_COUNT=$(git -C KernelSU rev-list --count "$MANAGER_HEAD_SHA" 2>/dev/null || echo "")
           if [ -n "$PIN_COUNT" ]; then
             case "${{ inputs.kernelsu_variant }}" in
@@ -318,49 +322,49 @@ jobs:
               *)      PINNED_KSU_VERSION="" ;;
             esac
             if [ -n "$PINNED_KSU_VERSION" ]; then
-              echo "内核 KSU 版本将对齐官方构建提交 ${MANAGER_HEAD_SHA:0:8}: $PINNED_KSU_VERSION"
+              echo "Kernel KSU version will align to official build commit ${MANAGER_HEAD_SHA:0:8}: $PINNED_KSU_VERSION"
               if [ "$MANAGER_VERSION" != "$PINNED_KSU_VERSION" ]; then
-                echo "::warning::Manager 实测版本 $MANAGER_VERSION 与官方构建提交对应的 KSU 版本 $PINNED_KSU_VERSION 不一致"
+                echo "::warning::Manager measured version $MANAGER_VERSION does not match the KSU version $PINNED_KSU_VERSION of the official build commit"
               fi
             elif [ -n "${KSU_VERSION:-}" ] && [ "$MANAGER_VERSION" != "$KSU_VERSION" ]; then
-              echo "::warning::Manager 实测版本 $MANAGER_VERSION 与内核 KSU 版本 ${KSU_VERSION} 不一致"
+              echo "::warning::Manager measured version $MANAGER_VERSION does not match the kernel KSU version ${KSU_VERSION}"
             fi
           elif [ -n "${KSU_VERSION:-}" ] && [ "$MANAGER_VERSION" != "$KSU_VERSION" ]; then
-            echo "::warning::Manager 实测版本 $MANAGER_VERSION 与内核 KSU 版本 ${KSU_VERSION} 不一致（无法计算官方构建提交对应的版本）"
+            echo "::warning::Manager measured version $MANAGER_VERSION does not match the kernel KSU version ${KSU_VERSION} (cannot compute the version for the official build commit)"
           fi
           echo "MANAGER_VERSION=$MANAGER_VERSION" >> $GITHUB_ENV
           echo "managerVer=$MANAGER_VERSION" >> $GITHUB_OUTPUT
           echo "ksuCommit=$MANAGER_HEAD_SHA" >> $GITHUB_OUTPUT
 
           if [ "${{ inputs.kernelsu_variant }}" == "BakaSU" ]; then
-            echo "仅保留 BakaSU arm64-v8a release 管理器..."
+            echo "Keeping only the BakaSU arm64-v8a release manager..."
             find manager-artifacts -type f -name "*.apk" ! -name "*-arm64-v8a-release.apk" -delete
             find manager-artifacts -type f -name "*debug*.apk" -delete
             if ! find manager-artifacts -type f -name "*-arm64-v8a-release.apk" | grep -q .; then
-              echo "未找到 BakaSU arm64-v8a release 管理器。"
+              echo "BakaSU arm64-v8a release manager not found."
               exit 1
             fi
             find manager-artifacts -type f -name "*.apk" -print
           fi
 
-          # FinaSU 已在上面的 Release 分支提前退出，不会走到 CI 产物流程。
-      - name: 添加 SUSFS 模块
+          # FinaSU already exited early in the Release branch above and never reaches the CI artifact flow.
+      - name: Add SUSFS module
         id: add_SUSFS
         continue-on-error: true
         run: |
-          # 上游 susfs4ksu-module 的 Actions artifacts 已全部过期，
-          # 模块现通过 GitHub Releases 发布，改为拉取最新 Release 资产
+          # The upstream susfs4ksu-module Actions artifacts have all expired;
+          # the module is now published via GitHub Releases, so fetch the latest Release asset instead
           RELEASE_API="https://api.github.com/repos/sidex15/susfs4ksu-module/releases/latest"
           RELEASE_JSON=""
           for ATTEMPT in 1 2 3; do
             RELEASE_JSON=$(curl -s --fail --max-time 30 \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$RELEASE_API") \
               && [ -n "$RELEASE_JSON" ] && break
-            echo "获取 Release 信息失败，重试 ($ATTEMPT/3)..."
+            echo "Failed to fetch Release info, retrying ($ATTEMPT/3)..."
             sleep 5
           done
           if [ -z "$RELEASE_JSON" ]; then
-            echo "无法获取 susfs4ksu-module 最新 Release 信息"
+            echo "Cannot fetch the latest susfs4ksu-module Release info"
             exit 1
           fi
 
@@ -368,21 +372,21 @@ jobs:
           ASSET_URL=$(printf '%s' "$RELEASE_JSON" | jq -r '.assets[] | select((.name | contains("ksu_module_susfs")) and (.name | endswith(".zip"))) | .browser_download_url' | head -n 1)
 
           if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then
-            echo "Release $TAG_NAME 中未找到 ksu_module_susfs 模块 zip"
+            echo "No ksu_module_susfs module zip found in Release $TAG_NAME"
             exit 1
           fi
 
           NAME="ksu_module_susfs.zip"
-          echo "下载 SUSFS 模块: $NAME (Release $TAG_NAME)"
+          echo "Downloading SUSFS module: $NAME (Release $TAG_NAME)"
           if ! curl -sL --fail --retry 3 --max-time 120 -o "$NAME" "$ASSET_URL"; then
-            echo "下载 SUSFS 模块失败: $ASSET_URL"
+            echo "Failed to download the SUSFS module: $ASSET_URL"
             exit 1
           fi
           echo "SUSFS_NAME=$TAG_NAME" >> $GITHUB_ENV
 
-          # Release 资产本身即完整模块 zip，校验完整性后直接放入模块目录
+          # The Release asset itself is the complete module zip; verify its integrity, then put it directly in the module directory
           if ! unzip -t "$NAME" >/dev/null 2>&1; then
-            echo "下载的 SUSFS 模块 zip 损坏"
+            echo "The downloaded SUSFS module zip is corrupted"
             exit 1
           fi
           mkdir -p susfs-module
@@ -391,9 +395,9 @@ jobs:
 
       - name: Notify on failure
         if: steps.add_KSU.outcome == 'failure'
-        run: echo "下载CI构建的KSU失败!"
+        run: echo "Failed to download the CI-built KSU!"
 
-      - name: 上传APK
+      - name: Upload APK
         if: steps.add_KSU.outcome == 'success'
         uses: actions/upload-artifact@v6
         with:
@@ -401,7 +405,7 @@ jobs:
           path: |
             manager-artifacts/**/*.apk
 
-      - name: 上传SUSFS模块
+      - name: Upload SUSFS module
         if: steps.add_SUSFS.outcome == 'success'
         uses: actions/upload-artifact@v6
         with:
