@@ -17,7 +17,7 @@ on:
           - FinaSU
         default: BakaSU
       custom_tag:
-        description: "Custom Build Tag / Name (e.g. NO-Zram)"
+        description: "Custom build tag/suffix (e.g., NO-Zram)"
         required: false
         type: string
         default: ""
@@ -26,19 +26,19 @@ on:
         required: false
         type: string
       build_time:
-        description: "Custom Build Time (Leave blank for auto UTC+8) (e.g. Sun Dec  1 08:10:00 UTC 2026)"
+        description: "Custom Build Time (Blank = Auto current Beijing time)"
         required: false
         type: string
         default: ""
       use_kpm:
-        description: "KPM Feature (SukiSU only)"
+        description: "KPM Feature (Supported by SukiSU only)"
         required: true
         type: choice
-        default: "disabled"
+        default: "disabled (关闭)"
         options:
-          - "disabled"
-          - "enabled"
-          - "patched"
+          - "disabled (关闭)"
+          - "enabled (开启)"
+          - "patched (开启并修补)"
       droidspaces:
         description: "Droidspaces Container Support"
         required: false
@@ -52,11 +52,11 @@ on:
         required: true
         type: choice
         options:
-          - "Upload AnyKernel3.zip only"
-          - "Upload All"
-        default: "Upload AnyKernel3.zip only"
+          - "仅上传 AnyKernel3.zip"
+          - "上传全部"
+        default: "仅上传 AnyKernel3.zip"
       droidspaces_ntsync:
-        description: "Enable Droidspaces Container NTSync Support (Requires Droidspaces)"
+        description: "Enable Droidspaces Container NTSync Support"
         required: false
         type: boolean
         default: false
@@ -96,7 +96,7 @@ on:
         type: boolean
         default: false
       skip_incompatible:
-        description: "Auto-skip incompatible features without breaking build"
+        description: "Auto-skip incompatible features"
         required: false
         type: boolean
         default: false
@@ -141,9 +141,11 @@ on:
       cancel_susfs:
         required: false
         type: boolean
+        default: false
       supp_op:
         required: false
         type: boolean
+        default: false
       droidspaces:
         required: false
         type: string
@@ -151,7 +153,7 @@ on:
       artifact_upload_mode:
         required: false
         type: string
-        default: "Upload All"
+        default: "上传全部"
       droidspaces_ntsync:
         required: false
         type: boolean
@@ -161,22 +163,19 @@ on:
         type: boolean
         default: false
       called_from_main:
-        description: "Internal use"
+        description: "Whether called from main.yml"
         required: false
         type: boolean
         default: false
       ksu_commit:
-        description: "KernelSU commit"
         required: false
         type: string
         default: ""
       ksu_cert_size:
-        description: "FinaSU cert size"
         required: false
         type: string
         default: ""
       ksu_cert_hash:
-        description: "FinaSU cert hash"
         required: false
         type: string
         default: ""
@@ -190,7 +189,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Cuma build versi 6.12 38
           - sub_level: "38"
             os_patch_level: "2025-09"
     uses: ./.github/workflows/build.yml
